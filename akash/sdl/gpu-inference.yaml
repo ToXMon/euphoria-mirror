@@ -2,7 +2,7 @@ version: "2.0"
 
 services:
   api:
-    image: ghcr.io/toxmon/euphoria-mirror:latest
+    image: ghcr.io/toxmon/euphoria-mirror:b8ca58a
     expose:
       - port: 8000
         as: 8000
