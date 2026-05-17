@@ -32,13 +32,13 @@ profiles:
           attributes:
             vendor:
               nvidia:
-                - model: a10g
+                - model: rtx3090
   placement:
     dcloud:
       pricing:
         api:
           denom: uact
-          amount: 2000
+          amount: 20000
 
 deployment:
   api:
