@@ -1,0 +1,440 @@
+{
+  "project_title": "Kronos Condor Cup",
+  "tasks": [
+    {
+      "id": "T0.1",
+      "title": "Finalize build inputs and asset list",
+      "description": "Lock Gate.io as the primary venue, define BTC/ETH core set, and select a short liquid RWA watchlist with documented inclusion criteria.",
+      "status": "todo",
+      "priority": "high",
+      "assigned_role": "architect",
+      "dependencies": [],
+      "parallelizable": false,
+      "files_to_change": [
+        "PROJECT.md",
+        "OPEN-QUESTIONS.md",
+        "docs/RISK-POLICY.md"
+      ],
+      "acceptance_criteria": [
+        "Primary venue is Gate.io",
+        "Core assets are BTC and ETH",
+        "RWA watchlist is short, liquid, and documented",
+        "Drawdown and per-trade cap are written down"
+      ]
+    },
+    {
+      "id": "T0.2",
+      "title": "Choose repo visibility and remote policy",
+      "description": "Decide GitHub visibility and record what must stay private before publishing.",
+      "status": "todo",
+      "priority": "high",
+      "assigned_role": "release_manager",
+      "dependencies": [
+        "T0.1"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "AGENTS.md",
+        "README.md",
+        "docs/EVIDENCE-PLAN.md"
+      ],
+      "acceptance_criteria": [
+        "Repo visibility decision recorded",
+        "Secret-handling rules written",
+        "Public release conditions listed"
+      ]
+    },
+    {
+      "id": "T1.1",
+      "title": "Define normalized signal schema",
+      "description": "Create one structured contract for Kronos forecasts, X-monitor signals, Geo-Alpha reports, and market data.",
+      "status": "todo",
+      "priority": "high",
+      "assigned_role": "architect",
+      "dependencies": [
+        "T0.1"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "docs/ARCHITECTURE.md",
+        "context/KRONOS-CONTEXT.md",
+        "context/X-MONITOR-CONTEXT.md",
+        "context/GEO-ALPHA-CONTEXT.md"
+      ],
+      "acceptance_criteria": [
+        "All signal sources map to one schema",
+        "Each signal includes timestamp, source, confidence, staleness, asset, and action hint",
+        "Schema supports conflict and agreement scoring"
+      ]
+    },
+    {
+      "id": "T1.2",
+      "title": "Define risk policy schema",
+      "description": "Write the risk rules that control all live decisions and dry-run behavior.",
+      "status": "todo",
+      "priority": "high",
+      "assigned_role": "security_auditor",
+      "dependencies": [
+        "T0.1"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "docs/RISK-POLICY.md",
+        "agent-instructions/ALWAYS-ON-AGENT.md",
+        "PROJECT.md"
+      ],
+      "acceptance_criteria": [
+        "Max drawdown, per-trade cap, per-strategy cap, and cooldown rules are documented",
+        "Every executor requires exit logic and time limit",
+        "Stale-data and API-failure kill switches are defined"
+      ]
+    },
+    {
+      "id": "T1.3",
+      "title": "Define controller-ID mapping and strategy roles",
+      "description": "Assign controller IDs to the major-asset, grid, and social-macro strategies so P&L attribution stays separated.",
+      "status": "todo",
+      "priority": "medium",
+      "assigned_role": "architect",
+      "dependencies": [
+        "T1.1",
+        "T1.2"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "PROJECT.md",
+        "docs/ARCHITECTURE.md",
+        "BUILD-PLAN.md"
+      ],
+      "acceptance_criteria": [
+        "Each strategy has a unique controller ID",
+        "Each controller has one sentence describing its role",
+        "No strategy can execute outside its controller boundary"
+      ]
+    },
+    {
+      "id": "T2.1",
+      "title": "Build X-monitor ingestion routine",
+      "description": "Convert X-monitor output into normalized signal records for Condor routines.",
+      "status": "todo",
+      "priority": "medium",
+      "assigned_role": "backend_engineer",
+      "dependencies": [
+        "T1.1",
+        "T1.2"
+      ],
+      "parallelizable": true,
+      "files_to_change": [
+        "agent-instructions/ALWAYS-ON-AGENT.md",
+        "docs/ARCHITECTURE.md",
+        "future routines/x_monitor_ingest.py"
+      ],
+      "acceptance_criteria": [
+        "Routine reads existing X-monitor artifacts",
+        "Routine emits structured signal records only",
+        "Routine never executes trades directly"
+      ]
+    },
+    {
+      "id": "T2.2",
+      "title": "Build Geo-Alpha ingestion routine",
+      "description": "Parse geopolitical and on-chain regime notes into decision-ready signals.",
+      "status": "todo",
+      "priority": "medium",
+      "assigned_role": "backend_engineer",
+      "dependencies": [
+        "T1.1",
+        "T1.2"
+      ],
+      "parallelizable": true,
+      "files_to_change": [
+        "context/GEO-ALPHA-CONTEXT.md",
+        "docs/ARCHITECTURE.md",
+        "future routines/geo_alpha_ingest.py"
+      ],
+      "acceptance_criteria": [
+        "Routine extracts regime, catalyst, affected asset, and invalidation",
+        "Routine tags confidence and freshness",
+        "Routine never overrides risk policy"
+      ]
+    },
+    {
+      "id": "T2.3",
+      "title": "Build Kronos forecast routine",
+      "description": "Fetch candles, format them for Kronos, and emit forecast bias and range metadata.",
+      "status": "todo",
+      "priority": "high",
+      "assigned_role": "ai_engineer",
+      "dependencies": [
+        "T1.1"
+      ],
+      "parallelizable": true,
+      "files_to_change": [
+        "context/KRONOS-CONTEXT.md",
+        "ops/DEPLOYMENT-PLAN.md",
+        "future routines/kronos_forecast.py"
+      ],
+      "acceptance_criteria": [
+        "Inputs follow OHLC or OHLCV format",
+        "Output includes forecast bias, range, and model identifier",
+        "Routine supports local dev and Akash runtime assumptions"
+      ]
+    },
+    {
+      "id": "T2.4",
+      "title": "Build market data sanity routine",
+      "description": "Validate that market data is fresh enough before any trade decision proceeds.",
+      "status": "todo",
+      "priority": "medium",
+      "assigned_role": "backend_engineer",
+      "dependencies": [
+        "T1.2"
+      ],
+      "parallelizable": true,
+      "files_to_change": [
+        "docs/RISK-POLICY.md",
+        "docs/ARCHITECTURE.md",
+        "future routines/market_sanity.py"
+      ],
+      "acceptance_criteria": [
+        "Routine checks candle freshness and spread/liquidity sanity",
+        "Routine can block execution on stale data",
+        "Routine returns a simple pass/fail plus reasons"
+      ]
+    },
+    {
+      "id": "T3.1",
+      "title": "Build the signal fusion engine",
+      "description": "Merge Kronos, X-monitor, Geo-Alpha, and market data into a single decision score.",
+      "status": "todo",
+      "priority": "high",
+      "assigned_role": "architect",
+      "dependencies": [
+        "T1.1",
+        "T1.2",
+        "T2.1",
+        "T2.2",
+        "T2.3",
+        "T2.4"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "docs/ARCHITECTURE.md",
+        "future routines/signal_fusion.py",
+        "future routines/decision_router.py"
+      ],
+      "acceptance_criteria": [
+        "Engine scores agreement and conflict across sources",
+        "Engine can return hold, open, reduce, or close recommendations",
+        "Engine writes why a trade was rejected"
+      ]
+    },
+    {
+      "id": "T3.2",
+      "title": "Create the strategy router",
+      "description": "Route approved decisions into the three strategy archetypes and the correct controller ID.",
+      "status": "todo",
+      "priority": "high",
+      "assigned_role": "backend_engineer",
+      "dependencies": [
+        "T1.3",
+        "T3.1"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "PROJECT.md",
+        "docs/ARCHITECTURE.md",
+        "future routines/strategy_router.py"
+      ],
+      "acceptance_criteria": [
+        "Major-asset strategy can be selected",
+        "Grid strategy can be selected",
+        "Social-macro strategy can be selected",
+        "Each route includes the target controller ID"
+      ]
+    },
+    {
+      "id": "T3.3",
+      "title": "Define executor templates for Gate.io",
+      "description": "Prepare bounded executor templates for Gate.io-compatible usage.",
+      "status": "todo",
+      "priority": "high",
+      "assigned_role": "backend_engineer",
+      "dependencies": [
+        "T1.2",
+        "T3.2"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "docs/ARCHITECTURE.md",
+        "docs/RISK-POLICY.md",
+        "future executors/*.py"
+      ],
+      "acceptance_criteria": [
+        "Templates include stop loss, target or exit rule, and time limit",
+        "Templates fit the major, grid, and social-macro archetypes",
+        "Templates are controller-aware"
+      ]
+    },
+    {
+      "id": "T4.1",
+      "title": "Build Condor backtest plan for the three archetypes",
+      "description": "Define how each strategy will be tested with Condor's built-in backtest feature.",
+      "status": "todo",
+      "priority": "high",
+      "assigned_role": "test_engineer",
+      "dependencies": [
+        "T3.1",
+        "T3.2"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "research/RESEARCH-MEMO.md",
+        "docs/EVIDENCE-PLAN.md",
+        "BUILD-PLAN.md"
+      ],
+      "acceptance_criteria": [
+        "Each archetype has a backtest scenario",
+        "Each scenario has input assumptions and expected outputs",
+        "Each scenario is tied to one controller ID"
+      ]
+    },
+    {
+      "id": "T4.2",
+      "title": "Run comparative backtests for majors vs majors+RWA",
+      "description": "Compare the main asset set with and without the RWA watchlist to see if complexity is worth it.",
+      "status": "todo",
+      "priority": "medium",
+      "assigned_role": "test_engineer",
+      "dependencies": [
+        "T4.1"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "docs/EVIDENCE-PLAN.md",
+        "PROJECT.md",
+        "future reports/backtest-*.md"
+      ],
+      "acceptance_criteria": [
+        "Backtest comparison criteria are written",
+        "The RWA list can be justified or removed from the live set",
+        "Results are stored in the evidence plan"
+      ]
+    },
+    {
+      "id": "T4.3",
+      "title": "Create the evidence bundle layout",
+      "description": "Prepare the directory layout and document list for judge-facing evidence.",
+      "status": "todo",
+      "priority": "medium",
+      "assigned_role": "release_manager",
+      "dependencies": [
+        "T4.1",
+        "T4.2"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "docs/EVIDENCE-PLAN.md",
+        "README.md",
+        "BUILD-PLAN.md"
+      ],
+      "acceptance_criteria": [
+        "Backtests, journals, signals, and risk logs have dedicated locations",
+        "Public repo cleanup requirements are listed",
+        "Submission checklist is complete"
+      ]
+    },
+    {
+      "id": "T5.1",
+      "title": "Wire the chosen path into a dry-run Condor session",
+      "description": "Connect the selected strategy path to a no-capital loop so the agent can run autonomously without live orders.",
+      "status": "todo",
+      "priority": "high",
+      "assigned_role": "backend_engineer",
+      "dependencies": [
+        "T3.1",
+        "T3.2",
+        "T4.3"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "agent-instructions/ALWAYS-ON-AGENT.md",
+        "docs/ARCHITECTURE.md",
+        "future sessions/*.md"
+      ],
+      "acceptance_criteria": [
+        "Dry-run loop starts and stops cleanly",
+        "No live trade execution is possible in this mode",
+        "Session journal is written"
+      ]
+    },
+    {
+      "id": "T5.2",
+      "title": "Validate failure handling in dry-run",
+      "description": "Make sure the system reacts safely to stale data, API failure, model failure, and risk breaches.",
+      "status": "todo",
+      "priority": "high",
+      "assigned_role": "qa_engineer",
+      "dependencies": [
+        "T5.1"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "docs/RISK-POLICY.md",
+        "docs/EVIDENCE-PLAN.md",
+        "future test files"
+      ],
+      "acceptance_criteria": [
+        "Stale data stops new entries",
+        "API failure prevents new trades",
+        "Drawdown breach triggers risk shutdown",
+        "Kronos failure falls back to safe behavior"
+      ]
+    },
+    {
+      "id": "T6.1",
+      "title": "Prepare the public repo cleanup pass",
+      "description": "Strip secrets, trim private notes, and make the repo safe for public visibility.",
+      "status": "todo",
+      "priority": "high",
+      "assigned_role": "security_auditor",
+      "dependencies": [
+        "T5.1",
+        "T5.2"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "README.md",
+        "AGENTS.md",
+        "PROJECT.md"
+      ],
+      "acceptance_criteria": [
+        "No secrets or credentials remain in tracked files",
+        "README explains setup and scope clearly",
+        "Private operational notes are removed or isolated"
+      ]
+    },
+    {
+      "id": "T6.2",
+      "title": "Write submission package and pitch",
+      "description": "Build the final judge-facing package with the story, evidence, and key results.",
+      "status": "todo",
+      "priority": "medium",
+      "assigned_role": "release_manager",
+      "dependencies": [
+        "T6.1"
+      ],
+      "parallelizable": false,
+      "files_to_change": [
+        "README.md",
+        "docs/EVIDENCE-PLAN.md",
+        "PROJECT.md"
+      ],
+      "acceptance_criteria": [
+        "README, pitch, and demo notes are complete",
+        "Evidence links are organized",
+        "Submission checklist is complete"
+      ]
+    }
+  ]
+}

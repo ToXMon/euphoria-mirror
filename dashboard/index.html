@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kronos — Euphoria Prediction Mirror</title>
+  <meta name="description" content="Real-time ETH prediction overlay for euphoria.finance">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">Kronos <span>Mirror</span></div>
+      </div>
+      <div class="header-right">
+        <span class="last-updated" id="last-updated">Waiting for data...</span>
+        <button class="refresh-btn" id="refresh-btn" aria-label="Refresh prediction data">
+          <span class="spinner" id="refresh-spinner" style="display:none"></span>
+          <span id="refresh-text">Refresh</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- PRICE DISPLAY -->
+    <section class="price-section" aria-label="Current ETH price">
+      <div class="price-label">ETH / USDT</div>
+      <div class="price-value tabular-nums" id="price-value">---</div>
+      <div class="price-change neutral tabular-nums" id="price-change"></div>
+    </section>
+
+    <!-- ZONE GRID -->
+    <section class="zone-grid-section" id="zone-grid" aria-label="Price prediction zones">
+    </section>
+
+    <!-- EDGE SCORE -->
+    <section id="edge-score" aria-label="Edge score gauge">
+    </section>
+
+    <!-- PANELS: Signals + Forecast -->
+    <div class="panels-grid">
+      <div class="panel" id="signals-panel" aria-label="Signal breakdown">
+      </div>
+      <div class="panel" id="forecast-panel" aria-label="Kronos forecast">
+      </div>
+    </div>
+
+    <!-- ERROR STATE -->
+    <div id="error-state" style="display:none" role="alert">
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/zone-grid.js"></script>
+  <script src="js/edge-score.js"></script>
+  <script src="js/signals.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
