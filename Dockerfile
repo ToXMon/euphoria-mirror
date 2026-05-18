@@ -24,6 +24,9 @@ RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuse
 # Copy backend code
 COPY backend/ ./backend/
 
+# Copy minimal Kronos source package used by backend.kronos_predictor
+COPY kronos/ ./kronos/
+
 # Copy dashboard static files
 COPY dashboard/ ./dashboard/
 
@@ -35,6 +38,7 @@ RUN chown -R appuser:appuser /app
 
 # Environment defaults
 ENV GPU_ENABLED=true
+ENV KRONOS_SOURCE_PATH=/app/kronos
 ENV USE_MOCK_DATA=false
 ENV CORS_ORIGINS=["*"]
 ENV HOST=0.0.0.0

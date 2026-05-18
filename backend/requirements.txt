@@ -9,3 +9,4 @@ huggingface_hub>=0.20
 requests>=2.31
 aiohttp>=3.9
 einops>=0.8.0
+safetensors>=0.4.0
