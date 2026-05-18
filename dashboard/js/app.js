@@ -2,10 +2,14 @@ var App = (function () {
   var state = {
     loading: false,
     error: null,
-    data: null
+    data: null,
+    hasEverLoaded: false,
+    refreshAttempts: 0
   };
 
+  var AUTO_REFRESH_MS = 2 * 60 * 1000; // 2 minutes
   var els = {};
+  var refreshTimer = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -34,8 +38,71 @@ var App = (function () {
       });
     }
 
-    showLoading();
-    refresh();
+    // Initial load - use cached data + background refresh
+    loadWithCache();
+  }
+
+  function loadWithCache() {
+    var result = KronosAPI.fetchAllCached();
+
+    // Phase 1: Show cached data immediately if available
+    var cachedPred = result.prediction.data;
+    var cachedSig = result.signals.data;
+
+    if (cachedPred || cachedSig) {
+      render({
+        prediction: cachedPred,
+        signals: cachedSig
+      });
+      updateTimestamp('Cached data');
+      state.hasEverLoaded = true;
+
+      // Show "refreshing" indicator
+      if (els.lastUpdated) {
+        els.lastUpdated.textContent = 'Cached — refreshing...';
+      }
+    } else {
+      // No cache - show loading skeleton
+      showLoading();
+      setRefreshing(true);
+      els.lastUpdated.textContent = 'Connecting to server (high-latency mode)...';
+    }
+
+    // Phase 2: Wait for fresh data
+    result.allSettled.then(function (fresh) {
+      state.loading = false;
+      setRefreshing(false);
+
+      var hasFreshData = fresh.prediction || fresh.signals;
+
+      if (hasFreshData) {
+        render({
+          prediction: fresh.prediction || cachedPred,
+          signals: fresh.signals || cachedSig
+        });
+        state.hasEverLoaded = true;
+        state.error = null;
+        hideError();
+        updateTimestamp();
+
+        // Show partial failure warnings
+        var warnings = [];
+        if (fresh.predictionError && !fresh.prediction) warnings.push('Prediction data unavailable');
+        if (fresh.signalsError && !fresh.signals) warnings.push('Signal data unavailable');
+        if (warnings.length > 0) {
+          showWarning(warnings.join('. ') + ' — showing cached data');
+        }
+      } else if (!cachedPred && !cachedSig) {
+        // No cache AND no fresh data
+        state.error = fresh.predictionError
+          ? fresh.predictionError.message
+          : 'Server unreachable. Check your connection and try again.';
+        showError(state.error);
+      }
+      // If we had cache but fresh failed, keep showing cached data (already rendered)
+
+      scheduleAutoRefresh();
+    });
   }
 
   function refresh() {
@@ -44,21 +111,47 @@ var App = (function () {
     state.error = null;
     setRefreshing(true);
     hideError();
+    hideWarning();
+
+    if (els.lastUpdated) {
+      els.lastUpdated.textContent = 'Refreshing...';
+    }
 
     KronosAPI.fetchAll()
       .then(function (data) {
         state.data = data;
         state.loading = false;
+        state.hasEverLoaded = true;
         setRefreshing(false);
         render(data);
         updateTimestamp();
+
+        if (data._errors && data._errors.length > 0) {
+          showWarning('Partial data: ' + data._errors.join('; '));
+        }
+
+        scheduleAutoRefresh();
       })
       .catch(function (err) {
         state.loading = false;
         state.error = err.message || 'Failed to fetch data';
         setRefreshing(false);
-        showError(state.error);
+
+        // Only show full error if we've never loaded data
+        if (!state.hasEverLoaded) {
+          showError(state.error);
+        } else {
+          // We have data already - show non-blocking warning
+          showWarning('Refresh failed: ' + state.error + ' — showing last known data');
+        }
       });
+  }
+
+  function scheduleAutoRefresh() {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(function () {
+      refresh();
+    }, AUTO_REFRESH_MS);
   }
 
   function setRefreshing(val) {
@@ -67,7 +160,11 @@ var App = (function () {
     els.refreshText.textContent = val ? 'Refreshing...' : 'Refresh';
   }
 
-  function updateTimestamp() {
+  function updateTimestamp(label) {
+    if (label) {
+      els.lastUpdated.textContent = label;
+      return;
+    }
     var now = new Date();
     var h = String(now.getHours()).padStart(2, '0');
     var m = String(now.getMinutes()).padStart(2, '0');
@@ -117,14 +214,14 @@ var App = (function () {
       { label: '1 hour', key: 'predicted_1h' }
     ];
 
-    var html = '<div class="panel-title"><span class="icon">🔮</span> Kronos Forecast</div>';
+    var html = '<div class="panel-title"><span class="icon">&#x1F52E;</span> Kronos Forecast</div>';
 
     for (var i = 0; i < horizons.length; i++) {
       var h = horizons[i];
       var forecastPrice = pred[h.key] || currentPrice;
       var diff = ((forecastPrice - currentPrice) / currentPrice) * 100;
       var dir = diff > 0.01 ? 'up' : diff < -0.01 ? 'down' : 'flat';
-      var arrow = dir === 'up' ? '↑' : dir === 'down' ? '↓' : '→';
+      var arrow = dir === 'up' ? '\u2191' : dir === 'down' ? '\u2193' : '\u2192';
       var changeStr = (diff >= 0 ? '+' : '') + diff.toFixed(2) + '%';
 
       html += '<div class="forecast-item">' +
@@ -141,7 +238,7 @@ var App = (function () {
   }
 
   function renderForecastSkeleton(container) {
-    var html = '<div class="panel-title"><span class="icon">🔮</span> Kronos Forecast</div>';
+    var html = '<div class="panel-title"><span class="icon">&#x1F52E;</span> Kronos Forecast</div>';
     for (var i = 0; i < 3; i++) {
       html += '<div class="forecast-item">' +
         '<div class="skeleton skeleton-line" style="width:30%"></div>' +
@@ -151,13 +248,43 @@ var App = (function () {
     container.innerHTML = html;
   }
 
+  function showWarning(msg) {
+    var existing = document.getElementById('warning-banner');
+    if (existing) existing.remove();
+
+    var banner = document.createElement('div');
+    banner.id = 'warning-banner';
+    banner.setAttribute('role', 'status');
+    banner.style.cssText = 'background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);' +
+      'color:#f59e0b;padding:8px 16px;border-radius:8px;font-size:13px;margin:8px 0;text-align:center;';
+    banner.textContent = msg;
+
+    if (els.appContainer) {
+      els.appContainer.insertBefore(banner, els.appContainer.firstChild);
+    }
+
+    // Auto-dismiss after 10s
+    setTimeout(function () {
+      if (banner.parentNode) banner.remove();
+    }, 10000);
+  }
+
+  function hideWarning() {
+    var existing = document.getElementById('warning-banner');
+    if (existing) existing.remove();
+  }
+
   function showError(msg) {
     if (els.errorState) {
       els.errorState.innerHTML =
         '<div class="error-state">' +
-          '<div class="error-icon">⚠️</div>' +
+          '<div class="error-icon">\u26A0\uFE0F</div>' +
           '<div class="error-message">' + escapeHtml(msg) + '</div>' +
-          '<button class="error-retry" id="error-retry" onclick="App.retry()">Retry</button>' +
+          '<div class="error-hint" style="color:var(--text-muted);font-size:13px;margin-top:8px;">' +
+            'The server is in Australia and may be slow from your location. ' +
+            'Data will load automatically when available.' +
+          '</div>' +
+          '<button class="error-retry" id="error-retry" onclick="App.retry()">Retry Now</button>' +
         '</div>';
       els.errorState.style.display = 'block';
     }
